@@ -26,7 +26,7 @@ with open(scaler_path, 'rb') as f:
 with open(metadata_path, 'r') as f:
     metadata = json.load(f)
 
-print("✓ Model loaded successfully")
+print("  Model loaded successfully")
 print(f"  Training Accuracy: {metadata['training_accuracy']*100:.2f}%")
 print(f"  Feature Names: {metadata['feature_names']}")
 
@@ -206,9 +206,9 @@ def predict_ecg(ecg_signal, fs, return_confidence=True):
 if __name__ == '__main__':
     import wfdb
     
-    print("\n" + "="*70)
+    print("\n" + "="*50)
     print("TESTING SVM MODEL ON NEW ECG DATA")
-    print("="*70)
+    print("="*50)
     
     # Load test record
     test_record_path = 'dataset/records100/00000/00001_lr'
@@ -240,7 +240,3 @@ if __name__ == '__main__':
         
     except Exception as e:
         print(f"✗ Error loading record: {e}")
-    
-    print("\n" + "="*70)
-    print("PREDICTION COMPLETE")
-    print("="*70)

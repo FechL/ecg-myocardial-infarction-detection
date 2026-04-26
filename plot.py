@@ -20,7 +20,7 @@ def load_database():
     if os.path.exists(DB_PATH):
         try:
             df = pd.read_csv(DB_PATH)
-            print(f"✓ Database loaded: {len(df)} records")
+            print(f"Database loaded: {len(df)} records")
             return df
         except Exception as e:
             print(f"Error loading database: {e}")
@@ -39,7 +39,7 @@ def load_scp_statements():
     if os.path.exists(SCP_PATH):
         try:
             df = pd.read_csv(SCP_PATH)
-            print(f"✓ SCP statements loaded: {len(df)} statements")
+            print(f"SCP statements loaded: {len(df)} statements")
             return df
         except Exception as e:
             print(f"Error loading SCP statements: {e}")
