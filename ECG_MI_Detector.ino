@@ -340,9 +340,6 @@ int predictSVM(float q_norm, float st_norm) {
     Serial.println(score);
 
     // Classification
-    // score > 0 → class 0 (NORMAL)
-    // score ≤ 0 → class 1 (MI)
-
     if (score > 0.0) {
         return 0; // NORMAL
     } else {
@@ -364,13 +361,10 @@ void displayDiagnosis(String diagnosis) {
     lcd.setCursor(0, 1);
     if (diagnosis == "NORMAL") {
         lcd.print("NORMAL      ");
-        Serial.println("✓ Status: NORMAL - No signs of MI");
+        Serial.println("  Status: NORMAL - No signs of MI");
     } else {
         lcd.print("MI DETECTED!");
-        Serial.println("⚠ Status: ALERT - MI Detected!");
-
-        // Optional: Trigger alarm or alert
-        // digitalWrite(ALARM_PIN, HIGH);
+        Serial.println("  Status: ALERT - MI Detected!");
     }
 
     delay(3000); // Display result for 3 seconds
@@ -406,36 +400,4 @@ void printDebugInfo() {
     Serial.println(st_norm);
 
     Serial.println("=============================\n");
-}
-
-// ==================== OPTIONAL: HEART RATE CALCULATION ====================
-
-float calculateHeartRate() {
-    /*
-     * Simple heart rate calculation
-     * Count zero-crossings or peaks in a 60-second window
-     * BPM = (peak_count / 60) * 60 = peak_count
-     */
-
-    // This requires peak detection
-    // For now, returning 0
-    return 0.0;
-}
-
-// ==================== OPTIONAL: SD CARD LOGGING ====================
-
-void logDataToSD() {
-    /*
-     * Optional: Log ECG data and diagnosis to SD card
-     * Requires: SD Card module on SPI pins
-     *
-     * Structure:
-     * - Timestamp
-     * - Raw ECG signal (sample)
-     * - Q_Waves feature
-     * - ST_Elevation feature
-     * - Prediction
-     */
-
-    // Implementation depends on SD card library
 }
