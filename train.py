@@ -38,17 +38,17 @@ EXPONENTIAL_FILTER_W = 0.55  # dari jurnal
 MIN_HR = 40  # BPM
 MAX_HR = 200  # BPM
 
-print("="*70)
+print("="*50)
 print("TRAINING SVM UNTUK DETEKSI MYOCARDIAL INFARCTION")
-print("="*70)
+print("="*50)
 
 # ==================== 1. LOAD DATABASE ====================
 print("\n[1] Loading database metadata...")
 try:
     db_df = pd.read_csv(DB_PATH)
-    print(f"✓ Database loaded: {len(db_df)} records")
+    print(f"  Database loaded: {len(db_df)} records")
 except Exception as e:
-    print(f"✗ Error loading database: {e}")
+    print(f"  Error loading database: {e}")
     exit(1)
 
 # ==================== 2. FILTER DATA BERDASARKAN DIAGNOSIS ====================
@@ -57,8 +57,8 @@ print("\n[2] Filtering data by diagnosis (NORM vs MI)...")
 def get_primary_diagnosis(scp_codes_str):
     """
     Extract primary diagnosis dari scp_codes
-    Contoh: "{'NORM': 100.0, 'SR': 0.0}" -> 'NORM'
-    atau "{'IMI': 35.0, 'ABQRS': 0.0}" -> 'IMI' (MI)
+    NORM: "{'NORM': 100.0, 'SR': 0.0}"
+    MI: "{'IMI': 35.0, 'ABQRS': 0.0}"
     """
     try:
         if pd.isna(scp_codes_str):
@@ -93,8 +93,8 @@ db_df['diagnosis'] = db_df['scp_codes'].apply(get_primary_diagnosis)
 norm_df = db_df[db_df['diagnosis'] == 'NORM'].copy()
 mi_df = db_df[db_df['diagnosis'] == 'MI'].copy()
 
-print(f"✓ NORM records: {len(norm_df)}")
-print(f"✓ MI records: {len(mi_df)}")
+print(f"  NORM records: {len(norm_df)}")
+print(f"  MI records: {len(mi_df)}")
 
 # ==================== 3. EKSTRAKSI FITUR ECG ====================
 print("\n[3] Extracting ECG features...")
@@ -264,15 +264,15 @@ n_samples_per_class = 18
 norm_sample = norm_df.sample(n=min(n_samples_per_class, len(norm_df)), random_state=42)
 mi_sample = mi_df.sample(n=min(n_samples_per_class, len(mi_df)), random_state=42)
 
-print(f"NORM samples: {len(norm_sample)}")
-print(f"MI samples: {len(mi_sample)}")
+print(f"  NORM samples: {len(norm_sample)}")
+print(f"  MI samples: {len(mi_sample)}")
 
 # Extract features
 X_train = []
 y_train = []
 feature_names = ['Q_Waves', 'ST_Elevation']
 
-print("\nExtracting NORM features...")
+print("  Extracting NORM features...")
 for idx, row in norm_sample.iterrows():
     record_path = Path(DATASET_PATH) / row['filename_lr']
     q_waves, st_elev, status = extract_features(str(record_path))
@@ -280,11 +280,11 @@ for idx, row in norm_sample.iterrows():
     if status == 'OK':
         X_train.append([q_waves, st_elev])
         y_train.append(0)  # 0 = NORM
-        print(f"  ✓ ECG ID {row['ecg_id']}: Q={q_waves:.4f}, ST={st_elev:.4f}")
+        print(f"    ECG ID {row['ecg_id']}: Q={q_waves:.4f}, ST={st_elev:.4f}")
     else:
-        print(f"  ✗ ECG ID {row['ecg_id']}: {status}")
+        print(f"    ECG ID {row['ecg_id']}: {status}")
 
-print("\nExtracting MI features...")
+print("  Extracting MI features...")
 for idx, row in mi_sample.iterrows():
     record_path = Path(DATASET_PATH) / row['filename_lr']
     q_waves, st_elev, status = extract_features(str(record_path))
@@ -292,16 +292,16 @@ for idx, row in mi_sample.iterrows():
     if status == 'OK':
         X_train.append([q_waves, st_elev])
         y_train.append(1)  # 1 = MI
-        print(f"  ✓ ECG ID {row['ecg_id']}: Q={q_waves:.4f}, ST={st_elev:.4f}")
+        print(f"    ECG ID {row['ecg_id']}: Q={q_waves:.4f}, ST={st_elev:.4f}")
     else:
-        print(f"  ✗ ECG ID {row['ecg_id']}: {status}")
+        print(f"    ECG ID {row['ecg_id']}: {status}")
 
 X_train = np.array(X_train)
 y_train = np.array(y_train)
 
-print(f"\n✓ Total training samples extracted: {len(X_train)}")
-print(f"  - NORM: {np.sum(y_train == 0)}")
-print(f"  - MI: {np.sum(y_train == 1)}")
+print(f"  Total training samples extracted: {len(X_train)}")
+print(f"    NORM: {np.sum(y_train == 0)}")
+print(f"    MI: {np.sum(y_train == 1)}")
 
 # ==================== 5. NORMALISASI Z-SCORE ====================
 print("\n[5] Normalizing features with Z-Score...")
@@ -309,8 +309,8 @@ print("\n[5] Normalizing features with Z-Score...")
 scaler = StandardScaler()
 X_train_normalized = scaler.fit_transform(X_train)
 
-print(f"Mean: {scaler.mean_}")
-print(f"Std: {scaler.scale_}")
+print(f"  Mean: {scaler.mean_}")
+print(f"  Std: {scaler.scale_}")
 
 # ==================== 6. TRAIN SVM ====================
 print("\n[6] Training SVM classifier...")
@@ -319,14 +319,13 @@ print("\n[6] Training SVM classifier...")
 svm_model = SVC(kernel='rbf', C=1.0, gamma='scale', random_state=42)
 svm_model.fit(X_train_normalized, y_train)
 
-print("✓ SVM training completed")
-print(f"  - Number of support vectors: {len(svm_model.support_vectors_)}")
+print(f"  Number of support vectors: {len(svm_model.support_vectors_)}")
 
 # Count support vectors per class
 sv_indices = svm_model.support_
 sv_labels = y_train[sv_indices]
-print(f"  - Class 0 (NORM) support vectors: {np.sum(sv_labels == 0)}")
-print(f"  - Class 1 (MI) support vectors: {np.sum(sv_labels == 1)}")
+print(f"  Class 0 (NORM) support vectors: {np.sum(sv_labels == 0)}")
+print(f"  Class 1 (MI) support vectors: {np.sum(sv_labels == 1)}")
 
 # ==================== 7. EVALUASI TRAINING ====================
 print("\n[7] Evaluating training model...")
@@ -334,10 +333,10 @@ print("\n[7] Evaluating training model...")
 y_pred_train = svm_model.predict(X_train_normalized)
 accuracy_train = accuracy_score(y_train, y_pred_train)
 
-print(f"Training Accuracy: {accuracy_train * 100:.2f}%")
-print("\nConfusion Matrix:")
+print(f"  Training Accuracy: {accuracy_train * 100:.2f}%")
+print("  Confusion Matrix:")
 print(confusion_matrix(y_train, y_pred_train))
-print("\nClassification Report:")
+print("  Classification Report:")
 print(classification_report(y_train, y_pred_train, target_names=['NORM', 'MI']))
 
 # ==================== 8. EXTRACT WEIGHTS ====================
@@ -349,8 +348,8 @@ coefficients = svm_model.dual_coef_[0]
 support_vectors = svm_model.support_vectors_
 intercept = svm_model.intercept_[0]
 
-print(f"Intercept (bias): {intercept:.6f}")
-print(f"Number of coefficients: {len(coefficients)}")
+print(f"  Intercept (bias): {intercept:.6f}")
+print(f"  Number of coefficients: {len(coefficients)}")
 
 # Untuk feature importance, kita bisa hitung menggunakan permutation importance
 from sklearn.inspection import permutation_importance
@@ -358,7 +357,7 @@ from sklearn.inspection import permutation_importance
 result = permutation_importance(svm_model, X_train_normalized, y_train, 
                                n_repeats=10, random_state=42)
 
-print("\nFeature Importance (Permutation):")
+print("  Feature Importance (Permutation):")
 for i, name in enumerate(feature_names):
     print(f"  {name}: {result.importances_mean[i]:.6f}")
 
@@ -369,13 +368,11 @@ print("\n[9] Saving model files...")
 model_path = Path(OUTPUT_DIR) / 'svm_model.pkl'
 with open(model_path, 'wb') as f:
     pickle.dump(svm_model, f)
-print(f"✓ Model saved: {model_path}")
 
 # Simpan scaler
 scaler_path = Path(OUTPUT_DIR) / 'scaler.pkl'
 with open(scaler_path, 'wb') as f:
     pickle.dump(scaler, f)
-print(f"✓ Scaler saved: {scaler_path}")
 
 # Simpan metadata
 metadata = {
@@ -394,7 +391,6 @@ metadata = {
 metadata_path = Path(OUTPUT_DIR) / 'model_metadata.json'
 with open(metadata_path, 'w') as f:
     json.dump(metadata, f, indent=2)
-print(f"✓ Metadata saved: {metadata_path}")
 
 # Simpan training data untuk reference
 training_data = {
@@ -407,29 +403,21 @@ training_data = {
 training_path = Path(OUTPUT_DIR) / 'training_data.json'
 with open(training_path, 'w') as f:
     json.dump(training_data, f, indent=2)
-print(f"✓ Training data saved: {training_path}")
 
 # ==================== 10. SUMMARY ====================
-print("\n" + "="*70)
-print("TRAINING SUMMARY")
-print("="*70)
-print(f"Model Type: SVM with RBF kernel")
-print(f"Training Samples: {len(X_train)}")
-print(f"  - NORM: {np.sum(y_train == 0)}")
-print(f"  - MI: {np.sum(y_train == 1)}")
-print(f"Features: {', '.join(feature_names)}")
-print(f"Training Accuracy: {accuracy_train * 100:.2f}%")
-print(f"Support Vectors: {len(support_vectors)}")
-print(f"\nModel Files:")
-print(f"  - {model_path}")
-print(f"  - {scaler_path}")
-print(f"  - {metadata_path}")
-print(f"  - {training_path}")
-print("="*70)
+print("\nTRAINING SUMMARY")
+print(f"  Model Type: SVM with RBF kernel")
+print(f"  Training Samples: {len(X_train)}")
+print(f"    - NORM: {np.sum(y_train == 0)}")
+print(f"    - MI: {np.sum(y_train == 1)}")
+print(f"  Features: {', '.join(feature_names)}")
+print(f"  Training Accuracy: {accuracy_train * 100:.2f}%")
+print(f"  Support Vectors: {len(support_vectors)}")
+print(f"  Weights (Permutation Importance):")
+print(f"    - Q Waves: {result.importances_mean[0]:.6f}")
+print(f"    - ST Elevation: {result.importances_mean[1]:.6f}")
 
 # ==================== 11. VISUALISASI ====================
-print("\n[11] Creating visualizations...")
-
 fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
 # Plot 1: Feature distribution
@@ -486,7 +474,4 @@ ax.grid(True, alpha=0.3)
 
 plt.tight_layout()
 plt.savefig(Path(OUTPUT_DIR) / 'training_analysis.png', dpi=150, bbox_inches='tight')
-print(f"✓ Visualization saved: {Path(OUTPUT_DIR) / 'training_analysis.png'}")
 plt.show()
-
-print("\n✓ Training pipeline completed successfully!")
