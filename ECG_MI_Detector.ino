@@ -6,15 +6,13 @@
  * Hardware:
  * - Arduino Uno
  * - AD8232 ECG Sensor Module
- * - LCD 16x2 (I2C)
- * - SD Card Module (Optional, untuk logging)
+ * - Serial Plotter (untuk visualisasi real-time)
  *
  * Pins:
  * - AD8232 Output: A0 (Analog)
  * - AD8232 LO+: D2 (Digital - Lead off detection)
  * - AD8232 LO-: D3 (Digital - Lead off detection)
- * - LCD SDA: A4 (I2C)
- * - LCD SCL: A5 (I2C)
+ * - Serial TX/RX: Default Arduino pins
  *
  * Training Parameters from Python Model:
  * - Intercept: 0.6634
@@ -22,25 +20,25 @@
  * - ST_Elevation Mean: -0.0344, Std: 0.0758
  * - Exponential Filter w: 0.55
  * - Sampling Rate: 100 Hz
+ * - Samples per Window: 1000 (Arduino) / 5000 (ESP32)
  */
-
-#include <LiquidCrystal_I2C.h>
-#include <Wire.h>
 
 // ==================== CONFIGURATION ====================
 
 // Sampling Configuration
 #define SAMPLING_RATE 100       // Hz
 #define SAMPLE_INTERVAL 10      // milliseconds (1000 / SAMPLING_RATE)
-#define SAMPLES_PER_WINDOW 1000 // 10 seconds of data at 100 Hz
+#define SAMPLES_PER_WINDOW 1000 // 10 seconds of data at 100 Hz (Arduino)
+// Note: For ESP32, use SAMPLES_PER_WINDOW 5000 (50 seconds at 100 Hz)
 
 // Pin Configuration
 #define ECG_INPUT A0
 #define ECG_LO_PLUS 2
 #define ECG_LO_MINUS 3
 
-// LCD Configuration (I2C address 0x27 for 16x2 display)
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+// Serial Plotter Configuration
+#define SERIAL_BAUD 115200      // Higher baud rate for better data transmission
+#define SERIAL_PLOT_ENABLED 1   // 1 = enable Serial Plotter, 0 = only monitor
 
 // ==================== TRAINED MODEL WEIGHTS ====================
 
@@ -73,7 +71,6 @@ float filtered_value_prev = 0.0;
 // ==================== FUNCTION PROTOTYPES ====================
 
 void setupAD8232();
-void setupLCD();
 void readECGSample();
 float applyExponentialFilter(float raw_value);
 void detectQRSPeaks();
@@ -82,22 +79,24 @@ void normalizeFeatures(float &q_norm, float &st_norm);
 int predictSVM(float q_norm, float st_norm);
 void displayDiagnosis(String diagnosis);
 void printDebugInfo();
+void serialPlotData();
 
 // ==================== SETUP ====================
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(SERIAL_BAUD);
     delay(1000);
 
     Serial.println("======================================");
     Serial.println("ECG MI Detection System - Arduino");
+    Serial.println("Serial Plotter Mode Enabled");
     Serial.println("======================================");
 
     setupAD8232();
-    setupLCD();
 
     delay(500);
     Serial.println("System initialized successfully!");
+    Serial.println("Waiting for ECG data...");
 }
 
 // ==================== MAIN LOOP ====================
@@ -110,6 +109,11 @@ void loop() {
     if (currentTime - lastSampleTime >= SAMPLE_INTERVAL) {
         lastSampleTime = currentTime;
         readECGSample();
+
+        // Send data to Serial Plotter (every sample)
+        if (SERIAL_PLOT_ENABLED) {
+            serialPlotData();
+        }
 
         // Once we have enough samples (10 seconds)
         if (sample_count >= SAMPLES_PER_WINDOW) {
@@ -149,31 +153,12 @@ void setupAD8232() {
     Serial.println("[+] AD8232 ECG Sensor initialized");
 }
 
-// ==================== LCD SETUP ====================
-
-void setupLCD() {
-    lcd.init();
-    lcd.backlight();
-
-    lcd.setCursor(0, 0);
-    lcd.print("ECG MI Detector");
-    lcd.setCursor(0, 1);
-    lcd.print("Initializing...");
-
-    delay(2000);
-    lcd.clear();
-
-    Serial.println("[+] LCD 16x2 initialized");
-}
-
 // ==================== ECG SAMPLING ====================
 
 void readECGSample() {
     // Check for lead-off detection
     if (digitalRead(ECG_LO_PLUS) || digitalRead(ECG_LO_MINUS)) {
         Serial.println("!!! Lead Off Detection !!!");
-        lcd.setCursor(0, 0);
-        lcd.print("Lead Off!");
         return;
     }
 
@@ -353,32 +338,16 @@ void displayDiagnosis(String diagnosis) {
     Serial.print("[RESULT] Diagnosis: ");
     Serial.println(diagnosis);
 
-    // LCD Display
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Diagnosis:");
-
-    lcd.setCursor(0, 1);
     if (diagnosis == "NORMAL") {
-        lcd.print("NORMAL      ");
         Serial.println("  Status: NORMAL - No signs of MI");
     } else {
-        lcd.print("MI DETECTED!");
         Serial.println("  Status: ALERT - MI Detected!");
     }
 
-    delay(3000); // Display result for 3 seconds
-
-    // Display feature info
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Q:");
-    lcd.print(q_waves_feature, 3);
-    lcd.setCursor(9, 0);
-    lcd.print("ST:");
-    lcd.print(st_elevation_feature, 3);
-
-    delay(2000);
+    Serial.print("  Q-Waves Feature: ");
+    Serial.println(q_waves_feature, 4);
+    Serial.print("  ST-Elevation Feature: ");
+    Serial.println(st_elevation_feature, 4);
 }
 
 // ==================== DEBUG INFO ====================
@@ -400,4 +369,18 @@ void printDebugInfo() {
     Serial.println(st_norm);
 
     Serial.println("=============================\n");
+}
+
+// ==================== SERIAL PLOTTER OUTPUT ====================
+
+void serialPlotData() {
+    // Output format for Arduino Serial Plotter (CSV style):
+    // Raw,Filtered
+    // This allows plotting both signals simultaneously
+    
+    if (sample_count > 0) {
+        Serial.print(ecg_raw[sample_count - 1], 4);
+        Serial.print(",");
+        Serial.println(ecg_filtered[sample_count - 1], 4);
+    }
 }
