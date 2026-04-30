@@ -26,9 +26,10 @@
 // ==================== CONFIGURATION ====================
 
 // Sampling Configuration
-#define SAMPLING_RATE 100       // Hz
-#define SAMPLE_INTERVAL 10      // milliseconds (1000 / SAMPLING_RATE)
-#define SAMPLES_PER_WINDOW 200  // 2 seconds of data at 100 Hz (Arduino limited memory)
+#define SAMPLING_RATE 100  // Hz
+#define SAMPLE_INTERVAL 10 // milliseconds (1000 / SAMPLING_RATE)
+#define SAMPLES_PER_WINDOW                                                     \
+    200 // 2 seconds of data at 100 Hz (Arduino limited memory)
 // Note: For ESP32, use ECG_MI_Detector_ESP32.ino with SAMPLES_PER_WINDOW 1000
 
 // Pin Configuration
@@ -37,8 +38,8 @@
 #define ECG_LO_MINUS 3
 
 // Serial Plotter Configuration
-#define SERIAL_BAUD 115200      // Higher baud rate for better data transmission
-#define SERIAL_PLOT_ENABLED 1   // 1 = enable Serial Plotter, 0 = only monitor
+#define SERIAL_BAUD 115200    // Higher baud rate for better data transmission
+#define SERIAL_PLOT_ENABLED 1 // 1 = enable Serial Plotter, 0 = only monitor
 
 // ==================== TRAINED MODEL WEIGHTS ====================
 
@@ -377,7 +378,7 @@ void serialPlotData() {
     // Output format for Arduino Serial Plotter (CSV style):
     // Raw,Filtered
     // This allows plotting both signals simultaneously
-    
+
     if (sample_count > 0) {
         Serial.print(ecg_raw[sample_count - 1], 4);
         Serial.print(",");

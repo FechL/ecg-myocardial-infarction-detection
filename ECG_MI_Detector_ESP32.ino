@@ -33,18 +33,19 @@
 // ==================== CONFIGURATION ====================
 
 // Sampling Configuration
-#define SAMPLING_RATE 100        // Hz (can increase to 500 if needed)
-#define SAMPLE_INTERVAL 10       // milliseconds (1000 / SAMPLING_RATE)
-#define SAMPLES_PER_WINDOW 1000  // 10 seconds of data at 100 Hz (ESP32 has plenty of RAM)
+#define SAMPLING_RATE 100  // Hz (can increase to 500 if needed)
+#define SAMPLE_INTERVAL 10 // milliseconds (1000 / SAMPLING_RATE)
+#define SAMPLES_PER_WINDOW                                                     \
+    1000 // 10 seconds of data at 100 Hz (ESP32 has plenty of RAM)
 
 // Pin Configuration
-#define ECG_INPUT 36             // GPIO36 (VP/ADC1_CH0) - Analog input
-#define ECG_LO_PLUS 2            // GPIO2 - Lead off detection
-#define ECG_LO_MINUS 4           // GPIO4 - Lead off detection
+#define ECG_INPUT 36   // GPIO36 (VP/ADC1_CH0) - Analog input
+#define ECG_LO_PLUS 2  // GPIO2 - Lead off detection
+#define ECG_LO_MINUS 4 // GPIO4 - Lead off detection
 
 // Serial Plotter Configuration
-#define SERIAL_BAUD 115200       // Higher baud rate for better data transmission
-#define SERIAL_PLOT_ENABLED 1    // 1 = enable Serial Plotter, 0 = only monitor
+#define SERIAL_BAUD 115200    // Higher baud rate for better data transmission
+#define SERIAL_PLOT_ENABLED 1 // 1 = enable Serial Plotter, 0 = only monitor
 
 // ==================== TRAINED MODEL WEIGHTS ====================
 
@@ -63,8 +64,8 @@ const float EXPONENTIAL_W = 0.55;
 // ==================== SIGNAL PROCESSING ====================
 
 // ECG Signal Buffers (dynamically allocated in setup)
-float* ecg_raw = NULL;
-float* ecg_filtered = NULL;
+float *ecg_raw = NULL;
+float *ecg_filtered = NULL;
 int sample_count = 0;
 
 // Feature Storage
@@ -99,14 +100,15 @@ void setup() {
     Serial.println("======================================");
 
     // Allocate buffers
-    ecg_raw = (float*)malloc(SAMPLES_PER_WINDOW * sizeof(float));
-    ecg_filtered = (float*)malloc(SAMPLES_PER_WINDOW * sizeof(float));
-    
+    ecg_raw = (float *)malloc(SAMPLES_PER_WINDOW * sizeof(float));
+    ecg_filtered = (float *)malloc(SAMPLES_PER_WINDOW * sizeof(float));
+
     if (ecg_raw == NULL || ecg_filtered == NULL) {
         Serial.println("ERROR: Memory allocation failed!");
-        while(1);
+        while (1)
+            ;
     }
-    
+
     Serial.println("[+] Memory allocated successfully");
 
     setupAD8232();
@@ -177,7 +179,7 @@ void setupAD8232() {
     // Configure ADC for ESP32
     // Set resolution to 12-bit (0-4095)
     analogSetWidth(12);
-    analogSetAttenuation(ATTENUATION_11DB);  // Full range 0-3.3V
+    analogSetAttenuation(ATTENUATION_11DB); // Full range 0-3.3V
 
     Serial.println("[+] AD8232 ECG Sensor initialized");
 }
@@ -402,7 +404,7 @@ void serialPlotData() {
     // Output format for Arduino Serial Plotter (CSV style):
     // Raw,Filtered
     // This allows plotting both signals simultaneously
-    
+
     if (sample_count > 0) {
         Serial.print(ecg_raw[sample_count - 1], 4);
         Serial.print(",");

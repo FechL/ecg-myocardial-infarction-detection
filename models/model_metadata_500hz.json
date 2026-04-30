@@ -1,0 +1,27 @@
+{
+  "feature_names": [
+    "Q_Waves",
+    "ST_Elevation"
+  ],
+  "sampling_rate": 500,
+  "samples_per_window": 200,
+  "window_duration_seconds": 0.4,
+  "scaler_mean": [
+    -0.07500749090830044,
+    -0.018518145384465796
+  ],
+  "scaler_std": [
+    0.08816963315599,
+    0.06845995798487077
+  ],
+  "svm_intercept": 0.7003021482951727,
+  "training_accuracy": 0.7777777777777778,
+  "n_training_samples": 36,
+  "n_support_vectors": 30,
+  "kernel": "rbf",
+  "exponential_filter_w": 0.55,
+  "feature_importance": [
+    0.15000000000000002,
+    0.1138888888888889
+  ]
+}
