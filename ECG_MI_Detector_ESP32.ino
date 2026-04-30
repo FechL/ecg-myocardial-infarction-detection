@@ -1,48 +1,54 @@
 /*
- * ECG Myocardial Infarction Detection System using Arduino Uno
+ * ECG Myocardial Infarction Detection System using ESP32
  * Based on: SVM Classification dengan Pathological Q Waves & ST Segment
  * Elevation
  *
  * Hardware:
- * - Arduino Uno
+ * - ESP32 Development Board
  * - AD8232 ECG Sensor Module
  * - Serial Plotter (untuk visualisasi real-time)
  *
  * Pins:
- * - AD8232 Output: A0 (Analog)
- * - AD8232 LO+: D2 (Digital - Lead off detection)
- * - AD8232 LO-: D3 (Digital - Lead off detection)
- * - Serial TX/RX: Default Arduino pins
+ * - AD8232 Output: GPIO36 (Analog - VP)
+ * - AD8232 LO+: GPIO2 (Digital)
+ * - AD8232 LO-: GPIO4 (Digital)
+ * - Serial TX/RX: Default ESP32 pins (GPIO1/GPIO3)
  *
- * Training Parameters from Python Model:
- * - Intercept: 0.6634
- * - Q_Waves Mean: -0.0608, Std: 0.1068
- * - ST_Elevation Mean: -0.0344, Std: 0.0758
+ * Advantages over Arduino:
+ * - Larger RAM (520 KB SRAM)
+ * - Faster processor (240 MHz dual-core)
+ * - Better ADC (12-bit, 4096 levels)
+ * - Can use 1000 samples per window
+ * - WiFi/Bluetooth capabilities
+ *
+ * Training Parameters from Python Model (500 Hz):
+ * - Intercept: [from 500hz model]
+ * - Q_Waves Mean/Std: [from 500hz model]
+ * - ST_Elevation Mean/Std: [from 500hz model]
  * - Exponential Filter w: 0.55
- * - Sampling Rate: 100 Hz
- * - Samples per Window: 1000 (Arduino) / 5000 (ESP32)
+ * - Sampling Rate: 500 Hz (or can use 100 Hz with longer window)
+ * - Samples per Window: 1000 (2 seconds at 500 Hz OR 10 seconds at 100 Hz)
  */
 
 // ==================== CONFIGURATION ====================
 
 // Sampling Configuration
-#define SAMPLING_RATE 100       // Hz
-#define SAMPLE_INTERVAL 10      // milliseconds (1000 / SAMPLING_RATE)
-#define SAMPLES_PER_WINDOW 200  // 2 seconds of data at 100 Hz (Arduino limited memory)
-// Note: For ESP32, use ECG_MI_Detector_ESP32.ino with SAMPLES_PER_WINDOW 1000
+#define SAMPLING_RATE 100        // Hz (can increase to 500 if needed)
+#define SAMPLE_INTERVAL 10       // milliseconds (1000 / SAMPLING_RATE)
+#define SAMPLES_PER_WINDOW 1000  // 10 seconds of data at 100 Hz (ESP32 has plenty of RAM)
 
 // Pin Configuration
-#define ECG_INPUT A0
-#define ECG_LO_PLUS 2
-#define ECG_LO_MINUS 3
+#define ECG_INPUT 36             // GPIO36 (VP/ADC1_CH0) - Analog input
+#define ECG_LO_PLUS 2            // GPIO2 - Lead off detection
+#define ECG_LO_MINUS 4           // GPIO4 - Lead off detection
 
 // Serial Plotter Configuration
-#define SERIAL_BAUD 115200      // Higher baud rate for better data transmission
-#define SERIAL_PLOT_ENABLED 1   // 1 = enable Serial Plotter, 0 = only monitor
+#define SERIAL_BAUD 115200       // Higher baud rate for better data transmission
+#define SERIAL_PLOT_ENABLED 1    // 1 = enable Serial Plotter, 0 = only monitor
 
 // ==================== TRAINED MODEL WEIGHTS ====================
 
-// Z-Score Normalization Parameters
+// Z-Score Normalization Parameters (from train.py 100 Hz model)
 const float Q_WAVES_MEAN = -0.0608;
 const float Q_WAVES_STD = 0.1068;
 const float ST_ELEVATION_MEAN = -0.0344;
@@ -56,9 +62,9 @@ const float EXPONENTIAL_W = 0.55;
 
 // ==================== SIGNAL PROCESSING ====================
 
-// ECG Signal Buffer
-float ecg_raw[SAMPLES_PER_WINDOW];
-float ecg_filtered[SAMPLES_PER_WINDOW];
+// ECG Signal Buffers (dynamically allocated in setup)
+float* ecg_raw = NULL;
+float* ecg_filtered = NULL;
 int sample_count = 0;
 
 // Feature Storage
@@ -88,14 +94,32 @@ void setup() {
     delay(1000);
 
     Serial.println("======================================");
-    Serial.println("ECG MI Detection System - Arduino");
+    Serial.println("ECG MI Detection System - ESP32");
     Serial.println("Serial Plotter Mode Enabled");
     Serial.println("======================================");
+
+    // Allocate buffers
+    ecg_raw = (float*)malloc(SAMPLES_PER_WINDOW * sizeof(float));
+    ecg_filtered = (float*)malloc(SAMPLES_PER_WINDOW * sizeof(float));
+    
+    if (ecg_raw == NULL || ecg_filtered == NULL) {
+        Serial.println("ERROR: Memory allocation failed!");
+        while(1);
+    }
+    
+    Serial.println("[+] Memory allocated successfully");
 
     setupAD8232();
 
     delay(500);
     Serial.println("System initialized successfully!");
+    Serial.print("Sampling Rate: ");
+    Serial.print(SAMPLING_RATE);
+    Serial.print(" Hz, Samples per Window: ");
+    Serial.print(SAMPLES_PER_WINDOW);
+    Serial.print(" (");
+    Serial.print((float)SAMPLES_PER_WINDOW / SAMPLING_RATE, 1);
+    Serial.println(" seconds)");
     Serial.println("Waiting for ECG data...");
 }
 
@@ -105,7 +129,7 @@ void loop() {
     static unsigned long lastSampleTime = 0;
     unsigned long currentTime = millis();
 
-    // Read sample at fixed interval (100 Hz)
+    // Read sample at fixed interval
     if (currentTime - lastSampleTime >= SAMPLE_INTERVAL) {
         lastSampleTime = currentTime;
         readECGSample();
@@ -115,7 +139,7 @@ void loop() {
             serialPlotData();
         }
 
-        // Once we have enough samples (10 seconds)
+        // Once we have enough samples
         if (sample_count >= SAMPLES_PER_WINDOW) {
 
             // Process the collected data
@@ -150,6 +174,11 @@ void setupAD8232() {
     pinMode(ECG_LO_MINUS, INPUT);
     pinMode(ECG_INPUT, INPUT);
 
+    // Configure ADC for ESP32
+    // Set resolution to 12-bit (0-4095)
+    analogSetWidth(12);
+    analogSetAttenuation(ATTENUATION_11DB);  // Full range 0-3.3V
+
     Serial.println("[+] AD8232 ECG Sensor initialized");
 }
 
@@ -162,11 +191,11 @@ void readECGSample() {
         return;
     }
 
-    // Read analog value (0-1023 for 0-5V)
+    // Read analog value (0-4095 for 0-3.3V on ESP32)
     int raw_adc = analogRead(ECG_INPUT);
 
-    // Convert to voltage (0-5V range, centered at 2.5V)
-    float voltage = (raw_adc / 1023.0) * 5.0 - 2.5;
+    // Convert to voltage (0-3.3V range, centered at 1.65V)
+    float voltage = (raw_adc / 4095.0) * 3.3 - 1.65;
 
     // Apply exponential filter for noise reduction
     ecg_raw[sample_count] = voltage;
@@ -231,11 +260,7 @@ void extractFeatures() {
      *   - Representasi: rata-rata amplitudo ST segment
      */
 
-    // Simplified feature extraction using statistical features
-    // Q_Waves = average of lowest 20% of values
-    // ST_Elevation = average of highest 20% of values
-
-    // Calculate mean and std of ECG signal
+    // Calculate mean of ECG signal
     float mean_ecg = 0.0;
     for (int i = 0; i < SAMPLES_PER_WINDOW; i++) {
         mean_ecg += ecg_filtered[i];
@@ -303,7 +328,7 @@ int predictSVM(float q_norm, float st_norm) {
     /*
      * SVM Decision Function (Simplified Linear Approximation)
      *
-     * For Arduino, we use a simplified linear decision boundary:
+     * For ESP32 (and Arduino), we use a simplified linear decision boundary:
      * score = w1*Q_norm + w2*ST_norm + b
      *
      * Feature Importance from Training:
