@@ -1,7 +1,7 @@
 # Sistem Deteksi Myocardial Infarction dengan SVM
 Jantung merupakan organ vital yang gangguannya dapat berdampak serius, dengan sekitar 17,9 juta kematian tiap tahun menurut WHO. Salah satu penyakitnya adalah Myocardial Infarction akibat penyumbatan aliran darah ke jantung, yang umumnya dideteksi melalui ECG, meski biaya dan aksesnya terbatas.
 
-Proyek ini mendeteksi kondisi tersebut menggunakan sinyal Pathological Q Waves dan ST Segment Elevation dengan sensor AD8232, yang diproses oleh Arduino Uno dan ditampilkan pada LCD 16x2.
+Proyek ini mendeteksi kondisi tersebut menggunakan sinyal Pathological Q Waves dan ST Segment Elevation dengan sensor AD8232 melalui Arduino Uno dan diproses serta tampilkan pada Device.
 
 ## Dataset
 [Download](https://physionet.org/content/ptb-xl/1.0.3/) (kemudian ganti nama folder menjadi "dataset")
