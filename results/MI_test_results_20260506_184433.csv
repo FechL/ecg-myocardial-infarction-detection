@@ -1,0 +1,3 @@
+ECG_ID,Diagnosis_Label,Window_Number,Q_Waves,ST_Elevation,Prediction,Confidence,Status,Multi_Lead
+103,IMI,0,-0.058350,-0.031510,0,0.002415,NORMAL,YES
+155,ILMI,0,-0.087067,0.010629,0,1.133481,NORMAL,YES

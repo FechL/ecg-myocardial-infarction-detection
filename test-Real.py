@@ -5,6 +5,9 @@ import threading
 import queue
 import numpy as np
 import pickle
+import csv
+import os
+from datetime import datetime
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 from scipy.signal import butter, filtfilt, find_peaks
@@ -146,6 +149,15 @@ class ECGApp:
         self.new_samples_count = 0      # Untuk trigger prediksi (tiap 100 sampel)
         self.is_running = True
         
+        # ===== CSV LOGGING SETUP =====
+        self.csv_filename = f"ecg_features_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        self.csv_file = open(self.csv_filename, 'w', newline='')
+        self.csv_writer = csv.writer(self.csv_file)
+        self.csv_writer.writerow(['Timestamp', 'Q_Waves', 'ST_Elevation', 'Label', 'Diagnosis'])
+        self.csv_file.flush()
+        self.last_csv_save_time = 0
+        print(f"[+] CSV logging dimulai: {self.csv_filename}")
+        
         self.setup_ui()
         self.start_serial_thread()
         self.update_gui()
@@ -269,10 +281,19 @@ class ECGApp:
                 self.lbl_q.config(text=f"Q Waves: {q_val:.4f}")
                 self.lbl_st.config(text=f"ST Elev: {st_val:.4f}")
                 
+                diagnosis = "NORMAL" if prediction == 0 else "MI DETECTED!"
+                label_text = "NORMAL" if prediction == 0 else "MI"
+                
                 if prediction == 0:
                     self.lbl_mi_status.config(text="Diagnosis: NORMAL", fg="green")
                 else:
                     self.lbl_mi_status.config(text="Diagnosis: MI DETECTED!", fg="red")
+                
+                # ===== SIMPAN KE CSV SETIAP PREDIKSI =====
+                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+                self.csv_writer.writerow([timestamp, f"{q_val:.6f}", f"{st_val:.6f}", label_text, diagnosis])
+                self.csv_file.flush()
+                print(f"[*] Data disimpan ke CSV - Q: {q_val:.4f}, ST: {st_val:.4f}, Label: {label_text}")
 
             # --- DETEKSI BPM (Butuh memori 15 detik penuh) ---
             if len(signal_window) >= WINDOW_BPM:
@@ -287,6 +308,10 @@ class ECGApp:
 
     def on_closing(self):
         self.is_running = False
+        # ===== TUTUP CSV FILE =====
+        if hasattr(self, 'csv_file'):
+            self.csv_file.close()
+            print(f"[+] CSV file ditutup: {self.csv_filename}")
         self.root.after(100, self._destroy_app)
 
     def _destroy_app(self):

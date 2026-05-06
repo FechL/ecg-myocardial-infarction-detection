@@ -1,0 +1,3 @@
+ECG_ID,Diagnosis_Label,Window_Number,Q_Waves,ST_Elevation,Prediction,Confidence,Status
+8,IMI (Inferior MI),0,-0.074938,0.025984,0,1.153688,NORMAL
+77,AMI (Anterior MI),0,-0.100172,0.023982,0,1.315243,NORMAL
