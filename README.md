@@ -4,7 +4,7 @@ Jantung merupakan organ vital yang gangguannya dapat berdampak serius, dengan se
 Proyek ini mendeteksi kondisi tersebut menggunakan sinyal Pathological Q Waves dan ST Segment Elevation dengan sensor AD8232 melalui Arduino Uno dan diproses serta tampilkan pada Device.
 
 ## Dataset
-[Download](https://physionet.org/content/ptb-xl/1.0.3/) (kemudian ganti nama folder menjadi "dataset")
+[Download](https://physionet.org/content/ptb-xl/1.0.3/#files) (kemudian ganti nama folder menjadi "dataset")
 
 Wagner, P., Strodthoff, N., Bousseljot, R., Samek, W., & Schaeffter, T. (2022). PTB-XL, a large publicly available electrocardiography dataset (version 1.0.3). PhysioNet. RRID:SCR_007345. https://doi.org/10.13026/kfzx-aw45
 
