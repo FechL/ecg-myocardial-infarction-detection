@@ -23,9 +23,9 @@ EXPONENTIAL_FILTER_W = 0.55
 
 # ==================== LOAD MODEL SVM ====================
 try:
-    with open('scaler.pkl', 'rb') as f:
+    with open('./models/scaler.pkl', 'rb') as f:
         scaler = pickle.load(f)
-    with open('svm_model.pkl', 'rb') as f:
+    with open('./models/svm_model.pkl', 'rb') as f:
         svm_model = pickle.load(f)
     print("[+] Model SVM dan Scaler berhasil dimuat.")
 except Exception as e:
@@ -148,9 +148,14 @@ class ECGApp:
         self.total_samples_received = 0 # Untuk menghitung detik
         self.new_samples_count = 0      # Untuk trigger prediksi (tiap 100 sampel)
         self.is_running = True
+        self.is_recording = False
+        self.recording_start_time = None
         
         # ===== CSV LOGGING SETUP =====
-        self.csv_filename = f"ecg_features_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        self.results_dir = './results'
+        if not os.path.exists(self.results_dir):
+            os.makedirs(self.results_dir)
+        self.csv_filename = os.path.join(self.results_dir, f"ecg_features_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
         self.csv_file = open(self.csv_filename, 'w', newline='')
         self.csv_writer = csv.writer(self.csv_file)
         self.csv_writer.writerow(['Timestamp', 'Q_Waves', 'ST_Elevation', 'Label', 'Diagnosis'])
@@ -169,6 +174,21 @@ class ECGApp:
         # 1. Baris Pertama: Timer / Waktu Perekaman
         self.lbl_timer = tk.Label(top_frame, text="Waktu Perekaman: 00:00", font=("Arial", 16, "bold"), fg="#2980b9")
         self.lbl_timer.pack(pady=(0, 10))
+        
+        # Tombol START/STOP Recording
+        button_frame = tk.Frame(top_frame)
+        button_frame.pack(fill=tk.X, pady=10)
+        
+        self.btn_start = tk.Button(button_frame, text="START RECORDING (15s)", command=self.start_recording,
+                                   bg="#27ae60", fg="white", font=("Arial", 12, "bold"), width=25)
+        self.btn_start.pack(side=tk.LEFT, padx=10)
+        
+        self.btn_stop = tk.Button(button_frame, text="STOP", command=self.stop_recording,
+                                  bg="#e74c3c", fg="white", font=("Arial", 12, "bold"), width=10, state=tk.DISABLED)
+        self.btn_stop.pack(side=tk.LEFT, padx=10)
+        
+        self.lbl_recording_status = tk.Label(button_frame, text="Status: SIAP", font=("Arial", 11, "bold"), fg="#27ae60")
+        self.lbl_recording_status.pack(side=tk.LEFT, padx=20)
 
         # 2. Baris Kedua: Status MI & Fitur
         frame_mi = tk.Frame(top_frame)
@@ -227,6 +247,24 @@ class ECGApp:
         self.thread = threading.Thread(target=read_from_port, daemon=True)
         self.thread.start()
 
+    def start_recording(self):
+        """Mulai recording selama 15 detik"""
+        self.is_recording = True
+        self.recording_start_time = datetime.now()
+        self.btn_start.config(state=tk.DISABLED)
+        self.btn_stop.config(state=tk.NORMAL)
+        self.lbl_recording_status.config(text="Status: RECORDING (15s)", fg="#e74c3c")
+        print("[+] Recording dimulai! (Durasi: 15 detik)")
+
+    def stop_recording(self):
+        """Hentikan recording"""
+        self.is_recording = False
+        self.recording_start_time = None
+        self.btn_start.config(state=tk.NORMAL)
+        self.btn_stop.config(state=tk.DISABLED)
+        self.lbl_recording_status.config(text="Status: SIAP", fg="#27ae60")
+        print("[-] Recording dihentikan.")
+
     def update_gui(self):
         while not self.data_queue.empty():
             val = self.data_queue.get()
@@ -263,7 +301,15 @@ class ECGApp:
             self.line.set_data(range(len(plot_data)), plot_data)
             self.canvas.draw_idle()
 
-        # 3. Prediksi AI & BPM (Di-trigger tiap 1 detik / 100 sampel data baru)
+        # 3. Cek apakah recording sudah 15 detik, jika ya auto-stop
+        if self.is_recording and self.recording_start_time is not None:
+            elapsed_time = (datetime.now() - self.recording_start_time).total_seconds()
+            self.lbl_recording_status.config(text=f"Status: RECORDING ({15 - int(elapsed_time):02d}s)")
+            if elapsed_time >= 15:
+                self.stop_recording()
+                print("[+] Recording otomatis berhenti (15 detik tercapai).")
+        
+        # 4. Prediksi AI & BPM (Di-trigger tiap 1 detik / 100 sampel data baru)
         if self.new_samples_count >= 100:
             self.new_samples_count = 0 # Reset trigger
             signal_window = np.array(self.ecg_buffer)
@@ -289,11 +335,12 @@ class ECGApp:
                 else:
                     self.lbl_mi_status.config(text="Diagnosis: MI DETECTED!", fg="red")
                 
-                # ===== SIMPAN KE CSV SETIAP PREDIKSI =====
-                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-                self.csv_writer.writerow([timestamp, f"{q_val:.6f}", f"{st_val:.6f}", label_text, diagnosis])
-                self.csv_file.flush()
-                print(f"[*] Data disimpan ke CSV - Q: {q_val:.4f}, ST: {st_val:.4f}, Label: {label_text}")
+                # ===== SIMPAN KE CSV HANYA SAAT RECORDING =====
+                if self.is_recording:
+                    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+                    self.csv_writer.writerow([timestamp, f"{q_val:.6f}", f"{st_val:.6f}", label_text, diagnosis])
+                    self.csv_file.flush()
+                    print(f"[*] Data disimpan ke CSV - Q: {q_val:.4f}, ST: {st_val:.4f}, Label: {label_text}")
 
             # --- DETEKSI BPM (Butuh memori 15 detik penuh) ---
             if len(signal_window) >= WINDOW_BPM:
