@@ -4,21 +4,21 @@
     "ST_Elevation"
   ],
   "scaler_mean": [
-    -0.06075197626497175,
-    -0.0343961393793591
+    -0.045151205067766986,
+    -0.02162079417599179
   ],
   "scaler_std": [
-    0.106834484123947,
-    0.07577742503585809
+    0.08826815152156159,
+    0.059935878867592135
   ],
-  "svm_intercept": 0.6634346420267678,
-  "training_accuracy": 0.7714285714285715,
-  "n_training_samples": 35,
-  "n_support_vectors": 31,
+  "svm_intercept": -0.2653293362003255,
+  "training_accuracy": 0.8611111111111112,
+  "n_training_samples": 36,
+  "n_support_vectors": 24,
   "kernel": "rbf",
   "exponential_filter_w": 0.55,
   "feature_importance": [
-    0.13428571428571434,
-    0.11428571428571432
+    0.11111111111111116,
+    0.2694444444444445
   ]
 }

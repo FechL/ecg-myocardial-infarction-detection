@@ -261,8 +261,8 @@ print("\n[4] Extracting training data features...")
 # Ambil balanced sample: 18 NORM + 18 MI = 36 total (sesuai jurnal)
 n_samples_per_class = 18
 
-norm_sample = norm_df.sample(n=min(n_samples_per_class, len(norm_df)), random_state=42)
-mi_sample = mi_df.sample(n=min(n_samples_per_class, len(mi_df)), random_state=42)
+norm_sample = norm_df.sample(n=min(n_samples_per_class, len(norm_df)), random_state=52)
+mi_sample = mi_df.sample(n=min(n_samples_per_class, len(mi_df)), random_state=52)
 
 print(f"  NORM samples: {len(norm_sample)}")
 print(f"  MI samples: {len(mi_sample)}")
