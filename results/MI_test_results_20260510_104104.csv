@@ -1,0 +1,3 @@
+ECG_ID,Diagnosis_Label,Window_Number,Q_Waves,ST_Elevation,Prediction,Confidence,Status,Lead
+5312,ASMI,0,-0.059588,-0.022596,1,0.169834,MI,II
+15997,IMI,0,-0.062826,-0.042441,1,0.687263,MI,II
